@@ -1,0 +1,440 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* La police de la maison. Auto-hébergée (aucun appel à Google, aucune dépendance
+   npm), une seule ressource variable de 57 ko qui couvre toutes les graisses —
+   deux fichiers statiques auraient pesé autant pour deux graisses seulement.
+   `swap` : le texte s'affiche tout de suite dans la pile système, la Geist prend
+   le relais. Le fallback est déclaré assez proche pour que la bascule ne décale
+   pas la mise en page. */
+@font-face {
+  font-family: 'Geist';
+  src: url('./polices/geist-variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    /* ============================================================== */
+    /* La palette SOMBRE, celle de la marque. La claire est en dessous. */
+    /* ============================================================== */
+    /* Sombre parce que desk-to-desk.com l'est : le site pose tout sur du #111,
+       l'app porte la même marque. Une palette CLAIRE existe depuis le
+       2026-10-02 (demandée : on travaille aussi en plein jour) — mais elle
+       redéfinit les MÊMES jetons, sous `:root[data-theme="clair"]` : aucun
+       composant ne sait quel thème est actif, et la classe conditionnelle reste interdite
+       (`interdits.test.js`). Le choix vit dans `lib/outils/theme.js`.
+
+       En OKLCH et pas en hexadécimal pour une raison mesurable : le premier
+       nombre EST la clarté perçue. Les trois encres sont donc trois pas d'une
+       même rampe (96 → 74 → 64) au lieu de trois gris trouvés séparément. La
+       troisième se mesure sur `surface-2`, le plus clair des fonds (zébrure,
+       survol), pas sur le fond : c'est là qu'elle est le plus près de casser —
+       4,8:1, et 5,3:1 sur une carte.
+       Teinte 255 pour les neutres : un gris froid, jamais un gris mort.
+
+       Les quatre fonds montent par pas d'environ 4 points de clarté : sur un
+       écran sombre, c'est la CLARTÉ qui empile les plans, pas l'ombre — une
+       ombre noire sur du noir ne se voit pas. Une carte reste donc reconnue
+       par sa ligne et par le pas qui la sépare du fond. */
+
+    --om-fond:        oklch(17.5% 0.004 255);  /* #0F1112 — le #111 du site   */
+    --om-surface:     oklch(21%   0.005 255);  /* la carte, un pas au-dessus  */
+    --om-surface-2:   oklch(25%   0.006 255);  /* survol, zébrure             */
+    --om-ligne:       oklch(30%   0.008 255);
+    --om-ligne-fine:  oklch(25.5% 0.006 255);
+
+    --om-encre:       oklch(96%   0.004 255);  /* 15.8:1 sur surface */
+    --om-encre-2:     oklch(74%   0.010 255);  /*  7.7:1 sur surface */
+    --om-encre-3:     oklch(64%   0.012 255);  /*  4.8:1 SUR SURFACE-2 */
+
+    /* L'accent ne sert qu'à trois choses : action primaire, sélection, focus.
+       Jamais à décorer un titre ou une icône.
+
+       Sur fond sombre il prend la valeur EXACTE du site : #2BCAA5 vaut
+       oklch(75.2% 0.137 172), et c'est ainsi qu'il s'affiche là-bas. La clarté
+       de 61 % qu'il avait sur blanc n'a plus lieu d'être — un teal foncé sur du
+       #0F1112 est boueux. Conséquence directe : ce qui s'écrit SUR un aplat
+       clair (accent, alerte, danger, encre-2) est `text-fond`, pas du blanc :
+       9,1:1 contre 2,1:1. À l'impression le fond redevient le papier et
+       l'aplat, un teal foncé : le rapport se retourne tout seul. */
+    --om-accent:       oklch(75%   0.137 172);
+    --om-accent-vif:   oklch(82%   0.140 172);  /* survol : plus clair, pas plus foncé */
+    --om-accent-doux:  oklch(28%   0.045 172);  /* aplat calme, lisible en encre       */
+    --om-focus:       var(--om-accent);
+
+    --om-danger:      oklch(65%   0.185 25);
+    --om-alerte:      oklch(76%   0.145 70);
+
+    --om-selection:        oklch(75% 0.137 172 / 0.14);
+    --om-selection-forte:  oklch(75% 0.137 172 / 0.24);
+    --om-entete:      oklch(23%   0.005 255);
+    /* Le voile des panneaux modaux : l'app reste lisible derrière, éteinte.
+       Plus dense que sur blanc — sur du sombre, un voile clair ne referme rien. */
+    --om-voile:       oklch(10% 0.006 255 / 0.62);
+    /* Le bloc de code : sur une app sombre il ne peut plus se distinguer en
+       étant sombre. Il se distingue en étant PLUS clair que la carte. */
+    --om-code-fond:   oklch(28%   0.008 255);
+    --om-code-encre:  oklch(94%   0.006 255);
+
+    /* Le papier. Une affiche se tire sur du blanc : ces six valeurs ne suivent
+       PAS la palette de l'écran — une feuille ne devient pas noire parce que
+       l'écran l'est, et l'encre de l'imprimante ne s'éclaircit pas. Ce sont
+       elles que `@media print` recopie sur toute la palette, en bas de fichier. */
+    --om-papier:         #ffffff;
+    --om-papier-encre:   #0f172a;
+    --om-papier-encre-2: #475569;
+    --om-papier-encre-3: #64748b;  /* 4,8:1 sur blanc : une mention de bas
+                                      d'affiche se lit encore à un mètre */
+    --om-papier-ligne:   #e2e8f0;
+    --om-papier-accent:  #076b59;  /* le teal ASSOMBRI : sur papier il porte du
+                                      texte (6,5:1), pas un aplat lumineux */
+
+    /* Séries de graphique (ordre FIXE, jamais recyclé). Ces trois pas sont
+       validés ensemble SUR LA SURFACE SOMBRE : bande de clarté, plancher de
+       chroma, séparation daltonienne (ΔE ≥ 13), contraste ≥ 3:1. Ce ne sont pas
+       les trois d'avant éclaircis — un #0F9C89 sur du #17181B tombe à 2,6:1. */
+    --serie-1: #2BCAA5;
+    --serie-2: #E8A33C;
+    --serie-3: #B69BFF;
+
+    /* ============================================================== */
+    /* Formes, profondeur, mouvement.                                 */
+    /* ============================================================== */
+    /* Quatre rayons, rien entre, et ils sont UNIFORMES. La coupe en diagonale
+       de desk-to-desk.com est tombée le 2026-09-29 : sur un outil dense, deux
+       coins vifs par carte faisaient une page d'accueil, pas un logiciel. Les
+       rayons sont petits — 4 px dedans, 6 px pour ce qui se touche, 10 px pour ce qui
+       contient — parce qu'une carte d'app se répète : un rayon large la fait
+       fondre. Uniformes, ils se coupent par un côté sans piège
+       (`rounded-l-controle`, `rounded-t-surface`). */
+    --r-interne: 4px;   /* ce qui vit DANS un contrôle : cellule de segmenté, badge */
+    --r-controle: 6px;
+    --r-surface: 10px;
+    --r-pastille: 999px;
+    --radius: 0.5rem;
+
+    /* Sur fond sombre une ombre grise ne se voit pas : elle doit être NOIRE et
+       franche, et c'est la ligne qui fait le contour. Le flottant garde donc
+       une ombre portée pour le détachement et rien d'autre. */
+    --om-ombre-pose:     0 1px 2px oklch(0% 0 0 / 0.40);
+    --om-ombre-flottant: 0 16px 40px -12px oklch(0% 0 0 / 0.70),
+                         0 2px 8px -2px oklch(0% 0 0 / 0.45);
+
+    /* Une seule courbe et trois durées pour toute l'app. Au-delà de 180 ms on
+       attend le logiciel au lieu de l'utiliser. */
+    --om-t-court: 110ms;
+    --om-t-moyen: 160ms;
+    --om-t-long:  240ms;  /* réservé aux entrées de panneau et de route */
+    --om-courbe:  cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  /* ================================================================ */
+  /* La palette CLAIRE : les mêmes jetons, pas un jeu de classes.      */
+  /* ================================================================ */
+  /* Calculée comme la sombre, en OKLCH, et mesurée (WCAG) : encre 17:1,
+     encre-2 8:1, encre-3 5:1 sur `surface-2`. Le fond est un gris à peine
+     teinté et la carte est blanche : sur du clair c'est l'OMBRE qui empile les
+     plans (douce, `pose`), plus la clarté. L'accent est le teal du site
+     ASSOMBRI : un #2BCAA5 sur blanc tombe à 2:1. Ce qui s'écrit sur un aplat
+     reste `text-fond` — ici presque blanc, 5:1 sur l'accent. */
+  :root[data-theme="clair"] {
+    color-scheme: light;
+    --om-fond:        oklch(98.4% 0.002 255);  /* #F9FAFB */
+    --om-surface:     oklch(100%  0     0);    /* #FFFFFF */
+    --om-surface-2:   oklch(96.6% 0.004 255);  /* #F2F4F6 */
+    --om-ligne:       oklch(91.5% 0.006 255);  /* #E0E3E7 */
+    --om-ligne-fine:  oklch(94.5% 0.005 255);
+
+    --om-encre:       oklch(22%   0.012 255);  /* 17:1 sur surface   */
+    --om-encre-2:     oklch(43%   0.014 255);  /*  8:1 sur surface   */
+    --om-encre-3:     oklch(52%   0.014 255);  /*  5:1 sur surface-2 */
+
+    --om-accent:      oklch(51%   0.103 172);
+    --om-accent-vif:  oklch(45%   0.095 172);  /* survol : plus foncé, ici */
+    --om-accent-doux: oklch(95.5% 0.028 172);
+
+    --om-danger:      oklch(55%   0.190 25);
+    --om-alerte:      oklch(55%   0.135 62);
+
+    --om-selection:        oklch(51% 0.103 172 / 0.08);
+    --om-selection-forte:  oklch(51% 0.103 172 / 0.16);
+    --om-entete:      oklch(97.5% 0.003 255);
+    --om-voile:       oklch(22% 0.012 255 / 0.36);
+    --om-code-fond:   oklch(96%   0.004 255);
+    --om-code-encre:  oklch(25%   0.012 255);
+
+    /* Les séries sur blanc : les tons du comparateur (`regimes/couleurs.js`). */
+    --serie-1: #0F9C89;
+    --serie-2: #C2740A;
+    --serie-3: #7C4DEB;
+
+    --om-ombre-pose:     0 1px 2px oklch(22% 0.012 255 / 0.05), 0 1px 3px oklch(22% 0.012 255 / 0.04);
+    --om-ombre-flottant: 0 12px 32px -8px oklch(22% 0.012 255 / 0.18),
+                         0 2px 6px -1px oklch(22% 0.012 255 / 0.08);
+  }
+}
+
+
+
+@layer base {
+  /* Champs numériques des outils : les flèches natives volent la place du suffixe
+     d'unité et ne servent à rien sur un loyer au m². */
+  .champ-nombre::-webkit-outer-spin-button,
+  .champ-nombre::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .champ-nombre { -moz-appearance: textfield; appearance: textfield; }
+
+  /* Une bordure déclarée sans couleur prend `currentColor`, donc la couleur du
+     texte : tout cadre non traité virait encre foncée. Le défaut est la ligne. */
+  * {
+    border-color: var(--om-ligne);
+  }
+
+  /* Un seul anneau de focus pour toute la maison. `outline-ring/50` posait un gris
+     invisible sur tout ; ici l'anneau est teal, à 2 px, et suit le rayon de
+     l'élément. Une primitive qui coupe l'outline doit en reposer un. */
+  :focus-visible {
+    outline: 2px solid var(--om-focus);
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+
+  html {
+    /* Dit au navigateur ce que la page est : barres de défilement, menus
+       déroulants natifs, saisies de date et zone morte du caoutchouc iOS
+       suivent, sans une ligne de CSS de plus. À l'impression, la règle
+       @media print le remet à `light`. */
+    color-scheme: dark;
+
+    /* Geist d'abord, puis la pile système — la bascule ne décale pas la page.
+       `tnum` : chiffres à chasse fixe. L'app est faite de tableaux, de dates et
+       de montants ; sans lui, une colonne de nombres tremble d'une ligne à
+       l'autre. `cv01` donne un « l » à empattement, lisible à 11 px. */
+    font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+                 Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-feature-settings: 'tnum' 1, 'cv01' 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background: var(--om-fond);
+    color: var(--om-encre);
+  }
+
+  /* EN CLAIR, UNE CARTE SE POSE. Sur du sombre c'est la clarté qui empile
+     les plans ; sur du clair, une carte blanche sur un gris à 98 % ne se lit
+     que par son ombre. Une règle ici plutôt qu'une classe dans cent écrans :
+     toute carte (`rounded-surface` + `bg-surface`) prend l'ombre `pose`, sauf
+     celle qui flotte déjà (elle porte sa propre ombre). */
+  :root[data-theme="clair"] .rounded-surface.bg-surface:not([class*="shadow-"]) {
+    box-shadow: var(--om-ombre-pose);
+  }
+
+  /* Une seule face, la Geist, tenue serrée sur les pas d'affichage : un
+     titre d'outil se lit comme une étiquette de logiciel, pas comme une
+     accroche. La face ronde du site est partie le 2026-09-29 avec la coupe
+     en diagonale — ronde, elle faisait « site vitrine » dans un tableau. */
+  .text-titre, .text-chiffre { letter-spacing: -0.02em; }
+  .text-chiffre { font-variant-numeric: tabular-nums; }
+  .text-section { letter-spacing: -0.01em; }
+
+  /* L'étiquette : capitales espacées, 11 px, pour ce qui NOMME une colonne,
+     une section de rail ou un groupe — jamais pour ce qui se lit. Un pas du
+     vocabulaire, pas une classe à recomposer : la casse vit ici. */
+  .text-etiquette { text-transform: uppercase; }
+
+  /* L'en-tête de tableau nomme ses colonnes : il prend l'étiquette ici, une
+     fois, plutôt que sur chaque `<th>` de chaque écran. Une classe posée sur
+     le `<th>` (couleur, graisse) garde la main : la base passe avant elle. */
+  thead th {
+    font-size: 11px;
+    line-height: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--om-encre-3);
+  }
+
+  /* Les chiffres qui se comparent (compteurs, dates, montants en colonne)
+     peuvent passer en chasse fixe par `font-mono`, qui est la pile système. */
+
+  /* Un seul endroit décide que rien ne bouge quand la machine le demande.
+     Les composants n'ont donc pas à porter la garde un par un. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ================================================================== */
+/* Mobile — fondations tactiles (Apple HIG / Material).               */
+/* ================================================================== */
+/* Coupe le délai de 300ms + le flash bleu au tap sur mobile. */
+@media (max-width: 767px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+  /* Une vraie app mobile ne se traîne pas latéralement dans le vide. `clip` et surtout PAS
+     `hidden` : `hidden` crée un conteneur de défilement et casserait le `position: sticky` du
+     header et de la barre de résumé de fiche. `overscroll-behavior-x` tue le rebond horizontal
+     (horizontal-scroll). Les bandes qui doivent défiler à l'horizontale le font dans LEUR propre
+     conteneur (les tablists ci-dessous), jamais via la page. */
+  html, body {
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+    max-width: 100%;
+  }
+  /* Une barre d'onglets est un `inline-flex` : au-delà de trois entrées elle pousse la page
+     hors de l'écran. On la rend défilable sur place. */
+  [role="tablist"] {
+    max-width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  [role="tablist"]::-webkit-scrollbar { display: none; }
+  /* iOS Safari zoome sur tout champ < 16px : 16px forcé sur téléphone
+     (HIG readable-font-size) — desktop inchangé. */
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* 100vh déborde sous les barres de Safari iOS : dvh suit la hauteur visible réelle.
+   Remappe les utilitaires Tailwind existants sans toucher chaque page. */
+@supports (height: 100dvh) {
+  .h-screen { height: 100dvh; }
+  .min-h-screen { min-height: 100dvh; }
+  .max-h-screen { max-height: 100dvh; }
+}
+
+
+/* Un QR agrandi doit garder ses carrés nets : lissé, il devient illisible pour
+   les lecteurs bas de gamme. */
+.qr-net { image-rendering: pixelated; }
+
+
+/* Feedback tactile : léger scale au press (respecte reduced-motion). */
+.tap-scale { transition: transform 0.12s ease; }
+.tap-scale:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .tap-scale { transition: none; }
+  .tap-scale:active { transform: none; }
+}
+
+
+/* ================================================================== */
+/* Impression — le rapport « Qui vient au bureau ».                   */
+/* Premier écran imprimable de l'app : un office manager ne transfère */
+/* pas un tableau de bord à son patron, il transfère une page. On     */
+/* masque donc tout SAUF le bloc porteur de `.d2d-imprimable`.        */
+/*                                                                    */
+/* `visibility` et non `display: none` : couper un ancêtre par        */
+/* `display` emporterait le rapport avec lui, quel que soit l'endroit */
+/* du DOM où le panneau est monté.                                    */
+/* ==================================================================
+   Changement d'outil : un fondu, pas un clignotement blanc
+   ==================================================================
+   `allerDouce()` (coque/transition.js) enveloppe la navigation dans
+   `document.startViewTransition`. Sans les règles ci-dessous, le navigateur
+   applique son fondu croisé par défaut, qui dure 250 ms et fait glisser la
+   page : trop long, et le rail (identique des deux côtés) traverserait
+   l'animation. On garde le fondu seul, à la durée courte, et on épingle le
+   rail hors de la transition pour qu'il ne bouge jamais.
+
+   Pas de fallback à écrire : un navigateur sans View Transitions ignore ces
+   règles et `allerDouce` navigue sèchement. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 110ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* Le curseur de rotation : une flèche double sens arrondie, dessinée à même la
+   règle. Un curseur est une image, pas un élément : il ne peut pas lire les
+   variables oklch du thème, d'où les deux couleurs écrites ici — encre foncée
+   doublée d'un liseré blanc, lisible aussi bien sur la feuille que sur un mur.
+   Aucun jeu de curseurs natif n'offre l'arc : `alias` et `grab` mentent. */
+.cursor-rotation {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'><path d='M4 9a8 8 0 0 1 14-3'/><path d='M20 15a8 8 0 0 1-14 3'/><path d='M18 2v4h-4'/><path d='M6 22v-4h4'/><g stroke='%230b1220' stroke-width='1.8'><path d='M4 9a8 8 0 0 1 14-3'/><path d='M20 15a8 8 0 0 1-14 3'/><path d='M18 2v4h-4'/><path d='M6 22v-4h4'/></g></svg>") 12 12, grab;
+}
+
+/* ================================================================== */
+@page { margin: 14mm; }
+
+@media print {
+  /* L'écran est sombre, le papier ne l'est pas. Plutôt que d'écrire une couleur
+     d'impression sur chaque bloc, la palette entière reprend ici les valeurs du
+     papier : tout ce qui porte un jeton sort en encre foncée sur blanc, sans
+     qu'un composant ait à le savoir. */
+  :root, :root[data-theme] {
+    color-scheme: light;
+    --om-fond: var(--om-papier);
+    --om-surface: var(--om-papier);
+    --om-surface-2: var(--om-papier);
+    --om-entete: #f8fafc;
+    --om-encre: var(--om-papier-encre);
+    --om-encre-2: var(--om-papier-encre-2);
+    --om-encre-3: var(--om-papier-encre-3);
+    --om-ligne: var(--om-papier-ligne);
+    --om-ligne-fine: #eef2f6;
+    --om-accent: var(--om-papier-accent);
+    --om-accent-vif: var(--om-papier-accent);
+    --om-accent-doux: #e6f7f2;
+    --om-selection: #eef7f4;
+    --om-selection-forte: #ddefe9;
+    --om-code-fond: #f1f5f9;
+    --om-code-encre: var(--om-papier-encre);
+    --om-ombre-pose: none;
+    --om-ombre-flottant: none;
+  }
+  body * { visibility: hidden !important; }
+  .d2d-imprimable, .d2d-imprimable * { visibility: visible !important; }
+  /* Une impression visée (`imprimer(element)`, lib/outils/impression.js) : les
+     blocs imprimables voisins se taisent, seul le bloc marqué sort. */
+  body[data-om-impression] .d2d-imprimable,
+  body[data-om-impression] .d2d-imprimable * { visibility: hidden !important; }
+  body[data-om-impression] [data-om-cible],
+  body[data-om-impression] [data-om-cible] * { visibility: visible !important; }
+  .d2d-imprimable, body[data-om-impression] [data-om-cible] {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  /* Boutons, croix de fermeture : utiles à l'écran, bruit sur papier. */
+  .d2d-sans-impression { display: none !important; }
+  /* Une ligne de tableau coupée en deux par un saut de page est illisible. */
+  .d2d-imprimable tr, .d2d-imprimable .d2d-bloc { break-inside: avoid; page-break-inside: avoid; }
+  .d2d-imprimable a { text-decoration: none; color: #000 !important; }
+}
